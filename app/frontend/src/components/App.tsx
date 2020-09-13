@@ -7,6 +7,7 @@ import { Video } from "./Video";
 import { Debug } from "./Debug";
 import { Map } from "./Map";
 import styles from "./App.module.scss";
+import {Jin} from "./Jin-local-jin";
 
 export const App: React.FC = () => {
   return (
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
         <Route exact path="/video" component={Video} />
         <Route exact path="/map" component={Map} />
         <Route exact path="/debug" component={Debug} />
+        <Route exact path="/jin" component={Jin} />
         <Route render={() => <p>Not found</p>} />
       </Switch>
     </div>

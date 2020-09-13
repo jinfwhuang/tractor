@@ -5,6 +5,7 @@
 
 # build protobufs and twirp server stubs for Go
 make protos
+make
 
 # start the webrtc proxy
 cd go/webrtc

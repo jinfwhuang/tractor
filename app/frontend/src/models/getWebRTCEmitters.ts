@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { Event as BusEvent } from "../../genproto/farm_ng_proto/tractor/v1/io";
+import {Event as BusAnyEvent, Event as BusEvent} from "../../genproto/farm_ng_proto/tractor/v1/io";
 import { BusEventEmitter } from "./BusEventEmitter";
 import { MediaStreamEmitter } from "./MediaStreamEmitter";
 
@@ -12,6 +12,12 @@ export function getWebRTCEmitters(
     iceServers: [] // no STUN servers, since we only support LAN
   });
 
+  // TODO: jin remove
+  busEventEmitter.on("ipc/announcement/webrtc-proxy", (event: BusAnyEvent) => {
+    console.log("invoking bus event callback")
+    console.log(event);
+  });
+
   pc.ontrack = (event) => {
     if (event.track.kind != "video") {
       console.log(
@@ -22,8 +28,14 @@ export function getWebRTCEmitters(
     mediaStreamEmitter.addVideoStream(event.streams[0]);
   };
 
-  pc.oniceconnectionstatechange = (_: Event) =>
+  // pc.oniceconnectionstatechange = (_: Event) =>
+  //   console.log(`New ICE Connection state: ${pc.iceConnectionState}`);
+
+  // TODO: debug
+  pc.oniceconnectionstatechange = (_: Event) => {
+    console.log("ice connection state change event", _);
     console.log(`New ICE Connection state: ${pc.iceConnectionState}`);
+  };
 
   pc.onicecandidate = async (event: RTCPeerConnectionIceEvent) => {
     if (event.candidate === null) {
@@ -37,6 +49,14 @@ export function getWebRTCEmitters(
           sdp: btoa(JSON.stringify(pc.localDescription))
         })
       });
+
+      // TODO: @jin
+      var abc = JSON.stringify({
+        sdp: btoa(JSON.stringify(pc.localDescription))
+      }, null, 2);
+      console.log(abc);
+      console.log("getting ice candidate");
+
       const responseJson = await response.json();
       try {
         pc.setRemoteDescription(
@@ -59,6 +79,8 @@ export function getWebRTCEmitters(
   dataChannel.onmessage = (msg) => {
     const event = BusEvent.decode(new Uint8Array(msg.data));
     busEventEmitter.emit(event);
+    console.log(`emitted an bus event: ${event}`);
+    console.log(event);
   };
 
   pc.createOffer()

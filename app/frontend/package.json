@@ -71,6 +71,7 @@
     "dev-start": "webpack-dev-server --progress",
     "dev-build": "webpack --progress",
     "build": "webpack --mode production --progress",
+    "build-watch": "webpack --mode production --progress --watch",
     "dev-watch": "webpack --progress --watch",
     "test": "jest",
     "test:integration": "jest .*\\.int\\.test\\.ts$"

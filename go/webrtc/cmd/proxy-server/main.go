@@ -63,7 +63,12 @@ func main() {
 	if farmNgRoot == "" {
 		log.Fatalln("FARM_NG_ROOT must be set.")
 	}
-	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
+	//spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
+
+	// TODO: remove
+	// app/frontend/dist is continuous built by `yarn dev-watch`
+	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "app/frontend/dist"), IndexPath: "index.html"}
+	_ = spa
 
 	// Serve the API and frontend
 	serverAddr := defaultServerAddr
