@@ -17,12 +17,14 @@ import (
 	"github.com/farm-ng/tractor/webrtc/internal/proxy"
 	"github.com/farm-ng/tractor/webrtc/internal/spa"
 	"github.com/gorilla/mux"
+
+	 //eventbusmain "github.com/farm-ng/tractor/webrtc/cmd/eventbus"
 )
 
 const (
-	eventBusAddr = "239.20.20.21"
-	eventBusPort = 10000
-	rtpAddr      = "239.20.20.20:5000"
+	EventBusAddr = "239.20.20.21"
+	EventBusPort = 10000
+	RtpAddr      = "239.20.20.20:5000"
 	// Set this too low and we see packet loss in chrome://webrtc-internals, and on the network interface (`netstat -suna`)
 	// But what should it be? `sysctl net.core.rmem_max`?
 	rtpReadBufferSize  = 1024 * 1024 * 8
@@ -31,17 +33,20 @@ const (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Llongfile)
+	os.Setenv("FARM_NG_ROOT", "/Users/jin/code/tractor")
+
 	// Create EventBus proxy
 	eventChan := make(chan *pb.Event)
-	eventBus := eventbus.NewEventBus((net.UDPAddr{IP: net.ParseIP(eventBusAddr), Port: eventBusPort}), "webrtc-proxy", eventChan, true)
+	eventBus := eventbus.NewEventBus((net.UDPAddr{IP: net.ParseIP(EventBusAddr), Port: EventBusPort}), "webrtc-proxy", eventChan, true)
 	eventBusProxy := proxy.NewEventBusProxy((&proxy.EventBusProxyConfig{EventBus: eventBus, EventSource: eventChan}))
 
 	// Create RTP proxy
-	rtpProxy := proxy.NewRtpProxy(&proxy.RtpProxyConfig{ListenAddr: rtpAddr, ReadBufferSize: rtpReadBufferSize, MaxDatagramSize: maxRtpDatagramSize})
+	rtpProxy := proxy.NewRtpProxy(&proxy.RtpProxyConfig{ListenAddr: RtpAddr, ReadBufferSize: rtpReadBufferSize, MaxDatagramSize: maxRtpDatagramSize})
 
 	// Create and start webRTC proxy
 	proxy := proxy.NewProxy(eventBusProxy, rtpProxy)
-	proxy.Start()
+	//proxy.Start()
 
 	// Create API handler
 	server := api.NewServer(proxy)

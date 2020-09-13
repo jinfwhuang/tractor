@@ -1,0 +1,16 @@
+FROM golang:alpine
+# redo
+# Install protoc
+RUN apk add --update-cache \
+  bash \
+  findutils \
+  git \
+  nodejs-current-npm \
+  protobuf \
+  protobuf-dev
+
+# Install protoc plugins
+RUN go get -u github.com/isherman/protoc-gen-twirp_tornado_srv
+RUN go get -u github.com/golang/protobuf/protoc-gen-go
+RUN go get -u github.com/twitchtv/twirp/protoc-gen-twirp
+RUN npm install -g long ts-proto
