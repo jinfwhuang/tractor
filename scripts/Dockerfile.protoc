@@ -2,6 +2,8 @@ FROM golang:alpine
 # redo
 # Install protoc
 RUN apk add --update-cache \
+  bash \
+  findutils \
   git \
   nodejs-current-npm \
   protobuf \
