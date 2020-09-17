@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"log"
 	"net"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	pb "github.com/farm-ng/tractor/genproto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/ipv4"
-	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -79,10 +79,15 @@ func (bus *EventBus) Start() {
 	// JoinGroup uses the system assigned multicast interface when ifi is nil,
 	// although this is not recommended...
 	p := ipv4.NewPacketConn(bus.receiveConn)
-	err = p.JoinGroup(nil, &net.UDPAddr{IP: bus.multicastGroup.IP})
+
+	ifi, err := net.InterfaceByName("lo0")
+
+	err = p.JoinGroup(ifi, &net.UDPAddr{IP: bus.multicastGroup.IP})
 	if err != nil {
+		log.Printf("attemped to join udp multicast at: %v", bus.multicastGroup)
 		log.Fatalf("receiveConn could not join group: %v", err)
 	}
+
 	// TODO: LeaveGroup?
 	// defer p.LeaveGroup(nil, &net.UDPAddr{IP: bus.multicastGroup.IP})
 
@@ -142,9 +147,9 @@ func (bus *EventBus) announce() {
 	}
 
 	for {
-		// log.Println("announcing: ", announce)
+		log.Println("announcing: ", announce)
 		bus.sendConn.WriteToUDP(announceBytes, &bus.multicastGroup)
-		// log.Println("announcing to: ", bus.multicastGroup.IP, bus.multicastGroup.Port)
+		log.Println("announcing to: ", bus.multicastGroup.IP, bus.multicastGroup.Port)
 
 		bus.announcementsMutex.Lock()
 		for key, a := range bus.Announcements {
@@ -189,8 +194,10 @@ func (bus *EventBus) handleAnnouncements() {
 		now := ptypes.TimestampNow()
 		err = proto.Unmarshal(buf[:n], announce)
 		if err != nil {
-			log.Fatalln("announcement parsing failed:", err, announce)
+			log.Println("announcement parsing failed:", err, announce)
+			continue
 		}
+		log.Println(announce)
 
 		if srcPort != int(announce.Port) {
 			log.Printf("sender port (%v) does not match announcement: %v", srcPort, announce)
@@ -226,6 +233,9 @@ func (bus *EventBus) handleEvents() {
 		}
 		event := &pb.Event{}
 		err = proto.Unmarshal(buf[:n], event)
+
+		log.Println("ggg", event)
+
 		if err != nil {
 			log.Fatalln("event parsing failed:", err, event)
 		}

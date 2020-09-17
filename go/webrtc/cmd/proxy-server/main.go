@@ -24,6 +24,9 @@ import (
 const (
 	EventBusAddr = "239.20.20.21"
 	EventBusPort = 10000
+	//EventBusAddr = "239.0.0.0"
+	//EventBusPort = 9999
+
 	RtpAddr      = "239.20.20.20:5000"
 	// Set this too low and we see packet loss in chrome://webrtc-internals, and on the network interface (`netstat -suna`)
 	// But what should it be? `sysctl net.core.rmem_max`?
@@ -46,7 +49,7 @@ func main() {
 
 	// Create and start webRTC proxy
 	proxy := proxy.NewProxy(eventBusProxy, rtpProxy)
-	//proxy.Start()
+	proxy.Start()
 
 	// Create API handler
 	server := api.NewServer(proxy)
@@ -85,6 +88,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	_ = srv
 	log.Println("Serving frontend and API at:", serverAddr)
 	log.Fatal(srv.ListenAndServe())
 }
