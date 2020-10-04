@@ -6,6 +6,10 @@ import { VisualizationStore } from "../stores/VisualizationStore";
 import { ProgramsStore } from "../stores/ProgramsStore";
 import { RigCalibrationStore } from "../stores/RigCalibrationStore";
 
+console.log(
+  `http://${window.location.host}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
+);
+
 const [busEventEmitter, mediaStreamEmitter, busClient] = getWebRTCEmitters(
   `http://${window.location.host}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
 );

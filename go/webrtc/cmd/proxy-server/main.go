@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 	"net/http"
@@ -29,7 +30,95 @@ const (
 	defaultServerAddr  = ":8585"
 )
 
+var flagApiServer bool
+var flagBlobstore bool
+var flagFrontendServer bool
+var flagSignalServer bool
+var farmNgRoot string
+var serverAddr string
+
+func init() {
+	flag.BoolVar(&flagApiServer, "flagApiServer", true, "API Server")
+	flag.BoolVar(&flagSignalServer, "flagSignalServer", true, "")
+	flag.BoolVar(&flagFrontendServer, "flagFrontendServer", true, "Frontend Server")
+	flag.BoolVar(&flagBlobstore, "flagBlobstore", true, "")
+	flag.Parse()
+	log.Println(flagApiServer)
+	log.Println(flagSignalServer)
+	log.Println(flagFrontendServer)
+
+	farmNgRoot = os.Getenv("FARM_NG_ROOT")
+	if farmNgRoot == "" {
+		log.Fatalln("FARM_NG_ROOT must be set.")
+	}
+
+	serverAddr = defaultServerAddr
+	port := os.Getenv("PORT")
+	if port != "" {
+		serverAddr = ":" + port
+	}
+}
+
 func main() {
+	proxy := startProxy()
+
+	srv := &http.Server{
+		Handler:      createRouter(proxy),
+		Addr:         serverAddr,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	log.Println("Serving frontend and API at:", serverAddr)
+	log.Fatal(srv.ListenAndServe())
+}
+
+
+func createRouter(proxy *proxy.Proxy) *mux.Router {
+	router := mux.NewRouter()
+	if flagFrontendServer {
+		spa := createSpaHandler()
+		router.PathPrefix("/app").Handler(*spa)
+	}
+	if flagBlobstore {
+		blobstore := createBlobstoreHandler()
+		router.PathPrefix("/resources/").Handler(http.StripPrefix("/resources", *blobstore))
+	}
+	if flagApiServer {
+		api := createApiHandler(proxy)
+		router.PathPrefix("/twirp/").Handler(*api)
+	}
+	return router
+}
+
+func createSpaHandler() *spa.Handler {
+	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
+	return &spa
+}
+
+func createBlobstoreHandler() *http.Handler {
+	blobstoreCorsWrapper := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET"},
+		AllowedHeaders: []string{"Content-Type"},
+	})
+	blobstore := blobstoreCorsWrapper.Handler(
+		http.FileServer(http.Dir(path.Join(farmNgRoot, "..", "tractor-data"))))
+	return &blobstore
+}
+
+func createApiHandler(proxy *proxy.Proxy) *http.Handler {
+	server := api.NewServer(proxy)
+	twirpHandler := genproto.NewWebRTCProxyServiceServer(server, nil)
+	corsWrapper := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"POST"},
+		AllowedHeaders: []string{"Content-Type"},
+	})
+	api := corsWrapper.Handler(twirpHandler)
+	return &api
+}
+
+func startProxy() *proxy.Proxy {
 	// Create EventBus proxy
 	eventChan := make(chan *pb.Event)
 	eventBus := eventbus.NewEventBus(&eventbus.EventBusConfig{
@@ -42,62 +131,21 @@ func main() {
 		Channel:              eventChan,
 		PublishAnnouncements: true,
 	})
-
-	// Create and start webRTC proxy
 	eventBusProxy := proxy.NewEventBusProxy(&proxy.EventBusProxyConfig{
 		EventBus:    eventBus,
 		EventSource: eventChan,
 	})
+
+	// Create Rtp proxy
 	rtpProxy := proxy.NewRtpProxy(&proxy.RtpProxyConfig{
 		ListenAddr:      rtpAddr,
 		ReadBufferSize:  rtpReadBufferSize,
 		MaxDatagramSize: maxRtpDatagramSize,
 	})
+
+	// Start webRTC proxy
 	proxy := proxy.NewProxy(eventBusProxy, rtpProxy)
 	proxy.Start()
 
-	// Create API handler
-	server := api.NewServer(proxy)
-	twirpHandler := genproto.NewWebRTCProxyServiceServer(server, nil)
-	corsWrapper := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"POST"},
-		AllowedHeaders: []string{"Content-Type"},
-	})
-	api := corsWrapper.Handler(twirpHandler)
-
-	// Create SPA handler
-	farmNgRoot := os.Getenv("FARM_NG_ROOT")
-	if farmNgRoot == "" {
-		log.Fatalln("FARM_NG_ROOT must be set.")
-	}
-	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
-
-	// Create blobstore handler
-	blobstoreCorsWrapper := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET"},
-		AllowedHeaders: []string{"Content-Type"},
-	})
-	blobstore := blobstoreCorsWrapper.Handler(
-		http.FileServer(http.Dir(path.Join(farmNgRoot, "..", "tractor-data"))))
-
-	// Serve the API and frontend
-	serverAddr := defaultServerAddr
-	port := os.Getenv("PORT")
-	if port != "" {
-		serverAddr = ":" + port
-	}
-	router := mux.NewRouter()
-	router.PathPrefix("/twirp/").Handler(api)
-	router.PathPrefix("/resources/").Handler(http.StripPrefix("/resources", blobstore))
-	router.PathPrefix("/").Handler(spa)
-	srv := &http.Server{
-		Handler:      router,
-		Addr:         serverAddr,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-	log.Println("Serving frontend and API at:", serverAddr)
-	log.Fatal(srv.ListenAndServe())
+	return proxy
 }
