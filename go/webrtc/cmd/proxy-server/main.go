@@ -2,15 +2,13 @@ package main
 
 import (
 	"flag"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path"
-	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 
 	"github.com/farm-ng/tractor/genproto"
 	pb "github.com/farm-ng/tractor/genproto"
@@ -36,6 +34,7 @@ var flagFrontendServer bool
 var flagSignalServer bool
 var farmNgRoot string
 var serverAddr string
+var signalingEndpoint string
 
 func init() {
 	flag.BoolVar(&flagApiServer, "flagApiServer", true, "API Server")
@@ -57,41 +56,70 @@ func init() {
 	if port != "" {
 		serverAddr = ":" + port
 	}
+
+	// -signal=http://192.168.1.137:8586
+	flag.StringVar(&signalingEndpoint, "signal", "http://192.168.1.137:8586", "")
 }
+
+/*
+1. maintain a persistent data channel to the signaling server
+   - If this is broken, close the old one and create a new one
+   - If cannot connect, fall into exponential retry. Stop sending messages. No other failure side effects to the application
+   - The channel has a stream of data
+     - peerId: Event connection details
+
+data type:
+- emitting by proxy and by singaling
+- peerId: remoteSess, localSess
+- sentFrom: proxy || signaling
+
+- remote and local are from the perspective of "sendFrom"
+
+
+
+2. The streaming data in the data channel is used to maintain the state of
+
+ */
 
 func main() {
-	proxy := startProxy()
-
-	srv := &http.Server{
-		Handler:      createRouter(proxy),
-		Addr:         serverAddr,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+	signalingConn := &proxy.SignalingConn{
+		Endpoint: signalingEndpoint,
 	}
-	log.Println("Serving frontend and API at:", serverAddr)
-	log.Fatal(srv.ListenAndServe())
-}
+	signalingConn.ConnectToSignal()
+	select {}
 
+	//proxy := startProxy()
+	//
+	//srv := &http.Server{
+	//	Handler:      createRouter(proxy),
+	//	Addr:         serverAddr,
+	//	WriteTimeout: 15 * time.Second,
+	//	ReadTimeout:  15 * time.Second,
+	//}
+	//log.Println("Serving frontend and API at:", serverAddr)
+	//log.Fatal(srv.ListenAndServe())
+}
 
 func createRouter(proxy *proxy.Proxy) *mux.Router {
 	router := mux.NewRouter()
-	if flagFrontendServer {
-		spa := createSpaHandler()
-		router.PathPrefix("/app").Handler(*spa)
+	if flagApiServer {
+		api := createApiHandler(proxy)
+		router.PathPrefix("/twirp/").Handler(*api)
 	}
 	if flagBlobstore {
 		blobstore := createBlobstoreHandler()
 		router.PathPrefix("/resources/").Handler(http.StripPrefix("/resources", *blobstore))
 	}
-	if flagApiServer {
-		api := createApiHandler(proxy)
-		router.PathPrefix("/twirp/").Handler(*api)
+	if flagFrontendServer {
+		spa := createSpaHandler()
+		router.PathPrefix("/").Handler(*spa)
 	}
 	return router
 }
 
 func createSpaHandler() *spa.Handler {
-	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
+	//spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "build/frontend"), IndexPath: "index.html"}
+	spa := spa.Handler{StaticPath: path.Join(farmNgRoot, "app/frontend/dist"), IndexPath: "index.html"}
 	return &spa
 }
 

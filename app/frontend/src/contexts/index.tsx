@@ -6,12 +6,15 @@ import { VisualizationStore } from "../stores/VisualizationStore";
 import { ProgramsStore } from "../stores/ProgramsStore";
 import { RigCalibrationStore } from "../stores/RigCalibrationStore";
 
-console.log(
-  `http://${window.location.host}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
-);
+// console.log(
+//   `http://${window.location.host}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
+// );
+
+const SIGNAL_HOST = window.location.host;
+// const SIGNAL_HOST = "127.0.0.1:8586";
 
 const [busEventEmitter, mediaStreamEmitter, busClient] = getWebRTCEmitters(
-  `http://${window.location.host}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
+  `http://${SIGNAL_HOST}/twirp/farm_ng_proto.tractor.v1.WebRTCProxyService/InitiatePeerConnection`
 );
 
 export const storesContext = React.createContext({

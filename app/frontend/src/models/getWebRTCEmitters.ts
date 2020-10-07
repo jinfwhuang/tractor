@@ -28,6 +28,12 @@ export function getWebRTCEmitters(
 
   pc.onicecandidate = async (event: RTCPeerConnectionIceEvent) => {
     if (event.candidate === null) {
+      console.log(
+        JSON.stringify({
+          sdp: btoa(JSON.stringify(pc.localDescription))
+        })
+      );
+
       const response = await fetch(endpoint, {
         method: "POST",
         mode: "cors",
@@ -38,6 +44,7 @@ export function getWebRTCEmitters(
           sdp: btoa(JSON.stringify(pc.localDescription))
         })
       });
+
       const responseJson = await response.json();
       try {
         pc.setRemoteDescription(

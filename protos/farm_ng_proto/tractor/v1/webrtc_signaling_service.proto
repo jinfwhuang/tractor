@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package farm_ng_proto.tractor.v1;
+option go_package = "github.com/farm_ng/genproto";
+
+import "google/protobuf/timestamp.proto";
+import "farm_ng_proto/tractor/v1/webrtc_proxy_service.proto";
+
+message WebRtcConnection {
+  // The answerer's Session Description Protocol description, as base64-encoded
+  // JSON
+  google.protobuf.Timestamp stamp = 1;
+  string connId = 2;
+  string clientSdp = 3;  // Session Description Protocol description, as base64-encoded
+  string proxySdp = 4;
+}
+
+service WebRTCSignalingService {
+  // Client connects to Proxy server by making the request to Signaling server
+  rpc InitiatePeerConnection(InitiatePeerConnectionRequest)
+    returns (InitiatePeerConnectionResponse) {}
+
+  // Proxy connects to Signaling server
+  rpc InitiateSignalingConnection(InitiatePeerConnectionRequest)
+    returns (InitiatePeerConnectionResponse) {}
+}

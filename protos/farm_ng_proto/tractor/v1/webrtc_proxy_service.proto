@@ -17,6 +17,7 @@ message InitiatePeerConnectionResponse {
 
 // Proxies UDP, including RTP video, to/from a WebRTC peer
 service WebRTCProxyService {
+  // Client connects to Proxy
   rpc InitiatePeerConnection(InitiatePeerConnectionRequest)
-      returns (InitiatePeerConnectionResponse) {}
+    returns (InitiatePeerConnectionResponse) {}
 }
