@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package farm_ng_proto.tractor.v1;
+option go_package = "github.com/farm_ng/genproto";
+
+import "google/protobuf/timestamp.proto";
+
+message WebRtcConnection {
+  // The answerer's Session Description Protocol description, as base64-encoded
+  // JSON
+  google.protobuf.Timestamp stamp = 1;
+  string connId = 2;
+  string clientSdp = 3; // Session Description Protocol description, as base64-encoded
+  string proxySdp = 4;
+}
+
+/*
+This message represents a webrtc session between the browser client and the proxy server.
+The signaling and proxy server send these messages back and forth in a webrtc data channel.
+*/
+message WebrtcPeerConn {
+  google.protobuf.Timestamp stamp = 1;
+  string connId = 2;
+  string clientSdp = 3; // Session Description Protocol description, base64-encoded string
+  string proxySdp = 4;
+}
+
+message InitiatePeerConnectionRequest {
+  // The offerer's Session Description Protocol description, as base64-encoded
+  // JSON
+  string sdp = 1;
+}
+message InitiatePeerConnectionResponse {
+  // The answerer's Session Description Protocol description, as base64-encoded
+  // JSON
+  string sdp = 1;
+}
+
+message ConnsReq {
+  // Empty
+}
+message ConnsResponse {
+  map<string, WebrtcPeerConn> conns = 1;
+}
+
+// Proxies UDP, including RTP video, to/from a WebRTC peer
+service WebrtcApiService {
+  // client connects to Proxy server
+  //  - client <-> proxy
+  //  - client <-> signaling <-> proxy
+  rpc InitiatePeerConnection (InitiatePeerConnectionRequest) returns (InitiatePeerConnectionResponse) {
+  }
+
+  // proxy <-> signaling
+  rpc InitiateSignalingConnection (InitiatePeerConnectionRequest) returns (InitiatePeerConnectionResponse) {
+  }
+
+  // view existing connections
+  rpc Conns (ConnsReq) returns (ConnsResponse) {
+  }
+}

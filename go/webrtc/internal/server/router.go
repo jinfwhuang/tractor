@@ -31,7 +31,7 @@ func CreateBlobstoreHandler(path string) *http.Handler {
 
 func CreateApiHandler(proxy *proxy.Proxy) *http.Handler {
 	server := api.NewServer(proxy)
-	twirpHandler := genproto.NewWebRTCProxyServiceServer(server, nil)
+	twirpHandler := genproto.NewWebrtcApiServiceServer(server, nil)
 	corsWrapper := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"POST"},
@@ -41,25 +41,11 @@ func CreateApiHandler(proxy *proxy.Proxy) *http.Handler {
 	return &api
 }
 
-//func CreateSignalingHandler(proxyEndpoint string) *http.Handler {
-//	server := &SignalingServer{
-//		proxyEndpoint: proxyEndpoint,
-//	}
-//	twirpHandler := genproto.NewWebRTCProxyServiceServer(server, nil)
-//	corsWrapper := cors.New(cors.Options{
-//		AllowedOrigins: []string{"*"},
-//		AllowedMethods: []string{"POST"},
-//		AllowedHeaders: []string{"Content-Type"},
-//	})
-//	api := corsWrapper.Handler(twirpHandler)
-//	return &api
-//}
-
-func CreateSignalingHandler2() *http.Handler {
+func CreateSignalingHandler() *http.Handler {
 	server := &SignalingServer{
 		//proxyEndpoint: proxyEndpoint,
 	}
-	twirpHandler := genproto.NewWebRTCSignalingServiceServer(server, nil)
+	twirpHandler := genproto.NewWebrtcApiServiceServer(server, nil)
 	corsWrapper := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"POST"},
@@ -68,3 +54,4 @@ func CreateSignalingHandler2() *http.Handler {
 	api := corsWrapper.Handler(twirpHandler)
 	return &api
 }
+

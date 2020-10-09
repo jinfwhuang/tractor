@@ -52,13 +52,9 @@ func main() {
 func createRouter() *mux.Router {
 	router := mux.NewRouter()
 
-	//// signaling
-	//signaling := server.CreateSignalingHandler(proxyEndpoint)
-	//router.PathPrefix("/twirp/").Handler(*signaling)
-
-	// signaling2
-	signaling2 := server.CreateSignalingHandler2()
-	router.PathPrefix("/twirp/").Handler(*signaling2)
+	// signaling
+	signaling := server.CreateSignalingHandler()
+	router.PathPrefix("/twirp/").Handler(*signaling)
 
 	// spa
 	staticPath := path.Join(farmNgRoot, "app/frontend/dist")

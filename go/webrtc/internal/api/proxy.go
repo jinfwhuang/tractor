@@ -4,27 +4,26 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-
 	pb "github.com/farm-ng/tractor/genproto"
 	"github.com/farm-ng/tractor/webrtc/internal/proxy"
 	"github.com/pion/webrtc/v3"
 	"github.com/twitchtv/twirp"
 )
 
-// Server is a Twirp server that exposes a webRTC proxy
-type Server struct {
+// ProxyServer is a Twirp server that exposes a webRTC proxy
+type ProxyServer struct {
 	proxy *proxy.Proxy
 }
 
-// NewServer constructs a Server
-func NewServer(p *proxy.Proxy) *Server {
-	return &Server{
+// NewServer constructs a ProxyServer
+func NewServer(p *proxy.Proxy) *ProxyServer {
+	return &ProxyServer{
 		proxy: p,
 	}
 }
 
 // InitiatePeerConnection starts the proxy and returns an SDP answer to the client
-func (s *Server) InitiatePeerConnection(ctx context.Context,
+func (s *ProxyServer) InitiatePeerConnection(ctx context.Context,
 	req *pb.InitiatePeerConnectionRequest) (res *pb.InitiatePeerConnectionResponse, err error) {
 
 	offer := webrtc.SessionDescription{}
@@ -50,3 +49,16 @@ func (s *Server) InitiatePeerConnection(ctx context.Context,
 		Sdp: base64.StdEncoding.EncodeToString(b),
 	}, nil
 }
+
+func (s *ProxyServer) InitiateSignalingConnection(
+	ctx context.Context,
+	req *pb.InitiatePeerConnectionRequest,
+) (res *pb.InitiatePeerConnectionResponse, err error) {
+	return nil, twirp.NewError(twirp.Internal, "not implemented; signaling server only api")
+}
+
+func (s *ProxyServer) Conns(ctx context.Context, req *pb.ConnsReq) (res *pb.ConnsResponse, err error) {
+	return nil, twirp.NewError(twirp.Internal, "not implemented")
+}
+
+

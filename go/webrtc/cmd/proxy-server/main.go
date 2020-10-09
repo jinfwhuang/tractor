@@ -37,9 +37,9 @@ var serverAddr string
 var signalingEndpoint string
 
 func init() {
-	flag.BoolVar(&flagApiServer, "flagApiServer", true, "API Server")
+	flag.BoolVar(&flagApiServer, "flagApiServer", true, "API ProxyServer")
 	flag.BoolVar(&flagSignalServer, "flagSignalServer", true, "")
-	flag.BoolVar(&flagFrontendServer, "flagFrontendServer", true, "Frontend Server")
+	flag.BoolVar(&flagFrontendServer, "flagFrontendServer", true, "Frontend ProxyServer")
 	flag.BoolVar(&flagBlobstore, "flagBlobstore", true, "")
 	flag.Parse()
 	log.Println(flagApiServer)
@@ -82,15 +82,17 @@ data type:
  */
 
 func main() {
+	proxySvr := startProxy()
+
 	signalingConn := &proxy.SignalingConn{
 		Endpoint: signalingEndpoint,
+		Proxy: proxySvr,
 	}
 	signalingConn.ConnectToSignal()
 	select {}
 
-	//proxy := startProxy()
 	//
-	//srv := &http.Server{
+	//srv := &http.ProxyServer{
 	//	Handler:      createRouter(proxy),
 	//	Addr:         serverAddr,
 	//	WriteTimeout: 15 * time.Second,
@@ -136,7 +138,7 @@ func createBlobstoreHandler() *http.Handler {
 
 func createApiHandler(proxy *proxy.Proxy) *http.Handler {
 	server := api.NewServer(proxy)
-	twirpHandler := genproto.NewWebRTCProxyServiceServer(server, nil)
+	twirpHandler := genproto.NewWebrtcApiServiceServer(server, nil)
 	corsWrapper := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"POST"},

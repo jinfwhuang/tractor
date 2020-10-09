@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	pb "github.com/farm-ng/tractor/genproto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/pion/datachannel"
 	"github.com/pion/webrtc/v3"
 	"github.com/twitchtv/twirp"
@@ -16,29 +16,30 @@ import (
 
 const (
 	SignalingChanName = "signaling_data_channel"
-	SignalingMessageSizeMax = 100000
+	SignalingMessageSizeMax = 1_000_000 // 1 mb
 )
 
 
 
 type SignalingConn struct {
 	Endpoint string
+	Proxy *Proxy
 	pc *webrtc.PeerConnection
 	raw *datachannel.ReadWriteCloser
 }
 
-func (s *SignalingConn) handleSignalingEvent(event *pb.WebRtcConnection) {
-	eventBytes, err := proto.Marshal(event)
-	//
-	//d := *s.raw
-	//_, err = d.Write(eventBytes)
-
-	log.Println("event size", len(eventBytes))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
+//func (s *SignalingConn) handleSignalingEvent(event *pb.WebRtcConnection) {
+//	eventBytes, err := proto.Marshal(event)
+//	//
+//	//d := *s.raw
+//	//_, err = d.Write(eventBytes)
+//
+//	log.Println("event size", len(eventBytes))
+//
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//}
 
 // ReadLoop shows how to read from the datachannel directly
 func (s *SignalingConn) ReadLoop() {
@@ -50,12 +51,59 @@ func (s *SignalingConn) ReadLoop() {
 			return
 		}
 
-		event := &pb.WebRtcConnection{}
+		fromClient := &pb.WebRtcConnection{}
 
-		proto.Unmarshal(buffer, event)
+		proto.Unmarshal(buffer, fromClient)
 
-		log.Println(event)
+		// handle a PeerConnectionEvent
+
+		_byte, err := proto.Marshal(fromClient)
+		log.Println("reading data", len(_byte))
+
+		s.handleConnEvent(fromClient)
 	}
+}
+
+/**
+1. initialize a peer connection
+2. send back a PeerConnectEvent
+ */
+func (s *SignalingConn) handleConnEvent(fromClient *pb.WebRtcConnection) {
+	// Setup a peer connection
+	clientSess := webrtc.SessionDescription{}
+	b, err := base64.StdEncoding.DecodeString(fromClient.ClientSdp)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(b, &clientSess)
+	if err != nil {
+		panic(err)
+	}
+	proxySess, err := s.Proxy.AddPeer(clientSess)
+	if err != nil {
+		panic(err)
+	}
+	b, err = json.Marshal(proxySess)
+	if err != nil {
+		panic(err)
+	}
+	proxySessSdpBase64 := base64.StdEncoding.EncodeToString(b);
+
+	// Make PeerConnEvent
+	fromProxy := &pb.WebRtcConnection{
+		Stamp: ptypes.TimestampNow(),
+		ConnId: fromClient.ConnId,
+		ClientSdp: fromClient.ClientSdp,
+		ProxySdp: proxySessSdpBase64,
+	}
+
+	// Send PeerConnEvent
+	eventBytes, err := proto.Marshal(fromProxy)
+	_, err = (*s.raw).Write(eventBytes)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("sent data", len(eventBytes))
 }
 
 //// WriteLoop shows how to write to the datachannel directly
@@ -118,7 +166,7 @@ func (s *SignalingConn) ConnectToSignal() error {
 
 	// Register channel opening handling
 	dataChannel.OnOpen(func() {
-		fmt.Printf("Data channel '%s'-'%d' open.\n", dataChannel.Label(), dataChannel.ID())
+		log.Println("Data channel opnned", dataChannel.Label(), dataChannel.ID())
 
 		// Detach the data channel
 		raw, dErr := dataChannel.Detach()
@@ -190,6 +238,7 @@ func (s *SignalingConn) ConnectToSignal() error {
 
 	log.Println("finished setting up datachannel")
 
+
 	return nil
 }
 
@@ -209,7 +258,7 @@ func findSignalingPeer(
 	log.Println("endpoint", endpoint)
 	log.Println("making twirp requests", req)
 
-	client := pb.NewWebRTCSignalingServiceJSONClient(endpoint, &http.Client{})
+	client := pb.NewWebrtcApiServiceJSONClient(endpoint, &http.Client{})
 	resp, err := client.InitiateSignalingConnection(context.Background(), req)
 
 	if resp == nil {
