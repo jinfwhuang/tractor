@@ -36,7 +36,7 @@ type SignalingServer struct {
 // API endpoint that is only used for debugging
 func (s *SignalingServer) Conns(
 	ctx context.Context,
-	req *pb.ConnsReq,
+	req *pb.ConnsRequest,
 ) (res *pb.ConnsResponse, err error) {
 	resp := &pb.ConnsResponse{
 		Size:  int32(len(s.conns)),
@@ -81,8 +81,8 @@ func (s *SignalingServer) InitiatePeerConnection(
 
 func (s *SignalingServer) InitiateSignalingConnection(
 	ctx context.Context,
-	req *pb.InitiatePeerConnectionRequest,
-) (res *pb.InitiatePeerConnectionResponse, err error) {
+	req *pb.InitiateSignalingConnectionRequest,
+) (res *pb.InitiateSignalingConnectionResponse, err error) {
 	log.Println("connecting to proxy")
 
 	offer, err := common.DeserializeSess(req.Sdp)
@@ -101,7 +101,7 @@ func (s *SignalingServer) InitiateSignalingConnection(
 		return nil, twirp.NewError(twirp.Internal, "cannot serialize local session: "+err.Error())
 	}
 
-	resp := &pb.InitiatePeerConnectionResponse{
+	resp := &pb.InitiateSignalingConnectionResponse{
 		Sdp: answerSdp,
 	}
 	return resp, nil

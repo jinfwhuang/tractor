@@ -176,7 +176,7 @@ func findSignalingPeer(
 	}
 
 	// Twirp req
-	req := &pb.InitiatePeerConnectionRequest{
+	req := &pb.InitiateSignalingConnectionRequest{
 		Sdp: base64.StdEncoding.EncodeToString(sdp),
 	}
 	client := pb.NewWebrtcApiServiceJSONClient(endpoint, &http.Client{})

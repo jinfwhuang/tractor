@@ -11,9 +11,9 @@ The signaling and proxy server send these messages back and forth in a webrtc da
 */
 message WebrtcPeerConn {
   google.protobuf.Timestamp stamp = 1;
-  string connId = 2;
-  string clientSdp = 3; // Session Description Protocol description, base64-encoded string
-  string proxySdp = 4;
+  string conn_id = 2;
+  string client_sdp = 3; // Session Description Protocol description, base64-encoded string
+  string proxy_sdp = 4;
 }
 
 message InitiatePeerConnectionRequest {
@@ -23,7 +23,14 @@ message InitiatePeerConnectionResponse {
   string sdp = 1; // Session Description Protocol description, base64-encoded string
 }
 
-message ConnsReq {
+message InitiateSignalingConnectionRequest {
+  string sdp = 1; // Session Description Protocol description, base64-encoded string
+}
+message InitiateSignalingConnectionResponse {
+  string sdp = 1; // Session Description Protocol description, base64-encoded string
+}
+
+message ConnsRequest {
   // Empty
 }
 message ConnsResponse {
@@ -44,12 +51,13 @@ service WebrtcApiService {
   rpc InitiatePeerConnection (InitiatePeerConnectionRequest) returns (InitiatePeerConnectionResponse) {
   }
 
+
   // proxy <-> signaling
-  rpc InitiateSignalingConnection (InitiatePeerConnectionRequest) returns (InitiatePeerConnectionResponse) {
+  rpc InitiateSignalingConnection (InitiateSignalingConnectionRequest) returns (InitiateSignalingConnectionResponse) {
   }
 
   // View existing connections
   // Used for debuggin only
-  rpc Conns (ConnsReq) returns (ConnsResponse) {
+  rpc Conns (ConnsRequest) returns (ConnsResponse) {
   }
 }

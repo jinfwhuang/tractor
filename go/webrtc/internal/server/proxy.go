@@ -49,12 +49,12 @@ func (s *ProxyServer) InitiatePeerConnection(ctx context.Context,
 
 func (s *ProxyServer) InitiateSignalingConnection(
 	ctx context.Context,
-	req *pb.InitiatePeerConnectionRequest,
-) (res *pb.InitiatePeerConnectionResponse, err error) {
+	req *pb.InitiateSignalingConnectionRequest,
+) (res *pb.InitiateSignalingConnectionResponse, err error) {
 	return nil, twirp.NewError(twirp.Internal, "not implemented; signaling server only server")
 }
 
-func (s *ProxyServer) Conns(ctx context.Context, req *pb.ConnsReq) (res *pb.ConnsResponse, err error) {
+func (s *ProxyServer) Conns(ctx context.Context, req *pb.ConnsRequest) (res *pb.ConnsResponse, err error) {
 	resp := &pb.ConnsResponse{
 		Size:  int32(len(s.proxy.WebrtcConns)),
 		Conns: s.proxy.WebrtcConns,
