@@ -43,3 +43,6 @@ build/
 
 # virtual env
 env/
+
+# yarn
+app/frontend/.cache
